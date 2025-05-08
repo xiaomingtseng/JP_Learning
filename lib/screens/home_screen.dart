@@ -8,7 +8,8 @@ import '../models/content_article.dart';
 import 'account_screen.dart';
 import 'settings_screen.dart';
 import 'translate_screen.dart';
-import 'learning_screen.dart'; // 匯入 LearningScreen
+import 'learning_screen.dart';
+import 'dictionary_screen.dart'; // 匯入 DictionaryScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -144,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _buildHomePageContent(),
       const TranslateScreen(),
       const LearningScreen(),
-      _buildPlaceholderPage('字典頁面'),
+      const DictionaryScreen(),
     ];
 
     PreferredSizeWidget? currentAppBar;

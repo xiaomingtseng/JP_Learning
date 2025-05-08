@@ -7,7 +7,8 @@ import '../models/news_article.dart';
 import '../models/content_article.dart';
 import 'account_screen.dart';
 import 'settings_screen.dart';
-import 'translate_screen.dart'; // 匯入 TranslateScreen
+import 'translate_screen.dart';
+import 'learning_screen.dart'; // 匯入 LearningScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -142,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> widgetOptions = <Widget>[
       _buildHomePageContent(),
       const TranslateScreen(),
-      _buildPlaceholderPage('學習頁面'),
+      const LearningScreen(),
       _buildPlaceholderPage('字典頁面'),
     ];
 

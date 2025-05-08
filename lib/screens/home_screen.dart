@@ -5,8 +5,9 @@ import '../widgets/news_card_widget.dart';
 import '../widgets/article_list_item_widget.dart';
 import '../models/news_article.dart';
 import '../models/content_article.dart';
-import 'account_screen.dart'; // 匯入 AccountScreen
-import 'settings_screen.dart'; // 匯入 SettingsScreen
+import 'account_screen.dart';
+import 'settings_screen.dart';
+import 'translate_screen.dart'; // 匯入 TranslateScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -55,7 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onSettingsPressed() {
     print("Settings button pressed");
-    // 導航到 SettingsScreen
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
@@ -64,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onAccountPressed() {
     print("Account button pressed");
-    // 導航到 AccountScreen
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => AccountScreen()),
@@ -106,7 +105,6 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FunctionIconsRow(
-            // 使用新的 Widget
             onNotebookPressed: _onNotebookPressed,
             onCameraPressed: _onCameraPressed,
             onMicPressed: _onMicPressed,
@@ -143,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final List<Widget> widgetOptions = <Widget>[
       _buildHomePageContent(),
-      _buildPlaceholderPage('翻譯頁面'),
+      const TranslateScreen(),
       _buildPlaceholderPage('學習頁面'),
       _buildPlaceholderPage('字典頁面'),
     ];
@@ -203,8 +201,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // _buildFunctionIcon 方法已移至 FunctionIconsRow Widget
-
   Widget _buildNewsSection() {
     return SizedBox(
       height: 180,
@@ -213,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: _newsItems.length,
         itemBuilder: (context, index) {
           final news = _newsItems[index];
-          return NewsCardWidget(news: news); // 使用新的 Widget
+          return NewsCardWidget(news: news);
         },
       ),
     );
@@ -228,7 +224,6 @@ class _HomeScreenState extends State<HomeScreen> {
       itemBuilder: (context, index) {
         final article = _contentArticles[index];
         return ArticleListItemWidget(
-          // 使用新的 Widget
           article: article,
           onTap: () {
             print('Tapped on article: ${article.title}');

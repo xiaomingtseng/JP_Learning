@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../widgets/search_bar_widget.dart';
-import '../widgets/function_icons_row.dart'; // 新增
-import '../widgets/news_card_widget.dart'; // 新增
-import '../widgets/article_list_item_widget.dart'; // 新增
-import '../models/news_article.dart'; // 新增
-import '../models/content_article.dart'; // 新增
+import '../widgets/function_icons_row.dart';
+import '../widgets/news_card_widget.dart';
+import '../widgets/article_list_item_widget.dart';
+import '../models/news_article.dart';
+import '../models/content_article.dart';
+import 'account_screen.dart'; // 匯入 AccountScreen
+import 'settings_screen.dart'; // 匯入 SettingsScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -53,16 +55,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onSettingsPressed() {
     print("Settings button pressed");
-    ScaffoldMessenger.of(
+    // 導航到 SettingsScreen
+    Navigator.push(
       context,
-    ).showSnackBar(const SnackBar(content: Text('設定按鈕已按下')));
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
   }
 
   void _onAccountPressed() {
     print("Account button pressed");
-    ScaffoldMessenger.of(
+    // 導航到 AccountScreen
+    Navigator.push(
       context,
-    ).showSnackBar(const SnackBar(content: Text('使用者帳戶按鈕已按下')));
+      MaterialPageRoute(builder: (context) => AccountScreen()),
+    );
   }
 
   void _onNotebookPressed() {

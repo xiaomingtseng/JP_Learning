@@ -55,22 +55,17 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  // 將使用者資料移至 State 中，使其可變
   late UserProfile _userProfile;
 
   @override
   void initState() {
     super.initState();
-    // 模擬的使用者資料 (實際應用中會從登入狀態或 API 獲取)
-    // 實際應用中，您會從 FirebaseAuth.instance.currentUser 獲取 email 和 name (displayName)
     final currentUser = FirebaseAuth.instance.currentUser;
     _userProfile = UserProfile(
-      name: currentUser?.displayName ?? '使用者名稱', // 從 Firebase 獲取或提供預設值
-      email: currentUser?.email ?? 'user@example.com', // 從 Firebase 獲取
-      avatarUrl:
-          currentUser?.photoURL ??
-          'https://via.placeholder.com/150', // 從 Firebase 獲取
-      likedArticlesCount: 15, // 這些統計數據需要從您的資料庫獲取
+      name: currentUser?.displayName ?? '使用者名稱',
+      email: currentUser?.email ?? 'user@example.com', // Email 從 Firebase 獲取
+      avatarUrl: currentUser?.photoURL ?? 'https://via.placeholder.com/150',
+      likedArticlesCount: 15,
       likedNewsCount: 5,
       learnedWordsCount: 120,
       learnedKanjiCount: 85,
@@ -157,10 +152,7 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _signOut() async {
     try {
       await FirebaseAuth.instance.signOut();
-      // 登出後，main.dart 中的 StreamBuilder 會自動處理導航
-      // 您可以選擇性地顯示一個 SnackBar
       if (mounted) {
-        // 檢查 widget 是否仍在 widget tree 中
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('已成功登出')));
@@ -168,7 +160,6 @@ class _AccountScreenState extends State<AccountScreen> {
     } catch (e) {
       print('Error signing out: $e');
       if (mounted) {
-        // 檢查 widget 是否仍在 widget tree 中
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('登出失敗: ${e.toString()}')));
@@ -205,8 +196,6 @@ class _AccountScreenState extends State<AccountScreen> {
                     _showEditDialog(context, '名稱', _userProfile.name, (
                       newValue,
                     ) {
-                      // 注意：直接修改 Firebase User 的 displayName 需要呼叫 user.updateDisplayName()
-                      // 這裡僅更新本地 UI 狀態，實際應用中需要同步到 Firebase
                       setState(() {
                         _userProfile = _userProfile.copyWith(name: newValue);
                       });
@@ -232,35 +221,14 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                 ),
                 const SizedBox(height: 4.0),
-                InkWell(
-                  // 使電子郵件可點擊
-                  onTap: () {
-                    _showEditDialog(context, '電子郵件', _userProfile.email, (
-                      newValue,
-                    ) {
-                      // 注意：修改 Firebase User 的 email 需要呼叫 user.updateEmail() 並可能需要重新認證
-                      // 這裡僅更新本地 UI 狀態
-                      setState(() {
-                        _userProfile = _userProfile.copyWith(email: newValue);
-                      });
-                      // FirebaseAuth.instance.currentUser?.updateEmail(newValue);
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _userProfile.email,
-                          style: TextStyle(
-                            fontSize: 16.0,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.edit, size: 16, color: Colors.grey[600]),
-                      ],
+                // 修改 Email 顯示部分，使其不可編輯
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Text(
+                    _userProfile.email, // 直接顯示 Email
+                    style: TextStyle(
+                      fontSize: 16.0,
+                      color: Colors.grey[700], // 可以調整顏色以示區別
                     ),
                   ),
                 ),

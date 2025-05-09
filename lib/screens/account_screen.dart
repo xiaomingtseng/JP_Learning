@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 匯入 Firebase Auth
 
 // 假設的使用者資料模型
 class UserProfile {
@@ -61,14 +62,19 @@ class _AccountScreenState extends State<AccountScreen> {
   void initState() {
     super.initState();
     // 模擬的使用者資料 (實際應用中會從登入狀態或 API 獲取)
+    // 實際應用中，您會從 FirebaseAuth.instance.currentUser 獲取 email 和 name (displayName)
+    final currentUser = FirebaseAuth.instance.currentUser;
     _userProfile = UserProfile(
-      name: '山田 太郎',
-      email: 'yamada.taro@example.com',
-      likedArticlesCount: 15,
+      name: currentUser?.displayName ?? '使用者名稱', // 從 Firebase 獲取或提供預設值
+      email: currentUser?.email ?? 'user@example.com', // 從 Firebase 獲取
+      avatarUrl:
+          currentUser?.photoURL ??
+          'https://via.placeholder.com/150', // 從 Firebase 獲取
+      likedArticlesCount: 15, // 這些統計數據需要從您的資料庫獲取
       likedNewsCount: 5,
       learnedWordsCount: 120,
       learnedKanjiCount: 85,
-      consecutiveLoginDays: 7, // 新增範例資料
+      consecutiveLoginDays: 7,
     );
   }
 
@@ -148,6 +154,28 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
+  Future<void> _signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      // 登出後，main.dart 中的 StreamBuilder 會自動處理導航
+      // 您可以選擇性地顯示一個 SnackBar
+      if (mounted) {
+        // 檢查 widget 是否仍在 widget tree 中
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已成功登出')));
+      }
+    } catch (e) {
+      print('Error signing out: $e');
+      if (mounted) {
+        // 檢查 widget 是否仍在 widget tree 中
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('登出失敗: ${e.toString()}')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,9 +190,11 @@ class _AccountScreenState extends State<AccountScreen> {
                 CircleAvatar(
                   radius: 50.0,
                   backgroundImage: NetworkImage(_userProfile.avatarUrl),
-                  onBackgroundImageError: (_, __) {},
+                  onBackgroundImageError: (_, __) {}, // 處理圖片載入錯誤
                   child:
-                      _userProfile.avatarUrl.isEmpty
+                      _userProfile.avatarUrl.isEmpty ||
+                              _userProfile.avatarUrl ==
+                                  'https://via.placeholder.com/150' // 檢查是否為預設圖片
                           ? const Icon(Icons.person, size: 50)
                           : null,
                 ),
@@ -175,9 +205,12 @@ class _AccountScreenState extends State<AccountScreen> {
                     _showEditDialog(context, '名稱', _userProfile.name, (
                       newValue,
                     ) {
+                      // 注意：直接修改 Firebase User 的 displayName 需要呼叫 user.updateDisplayName()
+                      // 這裡僅更新本地 UI 狀態，實際應用中需要同步到 Firebase
                       setState(() {
                         _userProfile = _userProfile.copyWith(name: newValue);
                       });
+                      // FirebaseAuth.instance.currentUser?.updateDisplayName(newValue);
                     });
                   },
                   child: Padding(
@@ -205,9 +238,12 @@ class _AccountScreenState extends State<AccountScreen> {
                     _showEditDialog(context, '電子郵件', _userProfile.email, (
                       newValue,
                     ) {
+                      // 注意：修改 Firebase User 的 email 需要呼叫 user.updateEmail() 並可能需要重新認證
+                      // 這裡僅更新本地 UI 狀態
                       setState(() {
                         _userProfile = _userProfile.copyWith(email: newValue);
                       });
+                      // FirebaseAuth.instance.currentUser?.updateEmail(newValue);
                     });
                   },
                   child: Padding(
@@ -288,11 +324,7 @@ class _AccountScreenState extends State<AccountScreen> {
           ElevatedButton.icon(
             icon: const Icon(Icons.logout),
             label: const Text('登出'),
-            onPressed: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('登出按鈕已按下')));
-            },
+            onPressed: _signOut, // 直接呼叫 _signOut 方法
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.redAccent,
               foregroundColor: Colors.white,

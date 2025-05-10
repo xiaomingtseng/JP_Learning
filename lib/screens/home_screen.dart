@@ -8,12 +8,15 @@ import '../models/content_article.dart';
 import '../services/news_service.dart'; // 匯入 NewsService
 import '../models/note_models.dart';
 import '../services/note_service.dart';
+import '../services/article_service.dart'; // 匯入 ArticleService
+import '../models/nhk_article.dart'; // 匯入 NhkArticle
 import 'account_screen.dart';
 import 'settings_screen.dart';
 import 'translate_screen.dart';
 import 'learning_screen.dart';
 import 'dictionary_screen.dart';
 import 'notebooks_screen.dart'; // 匯入 NotebooksScreen
+import 'article_webview_screen.dart'; // 匯入 ArticleWebViewScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,20 +40,20 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  final List<ContentArticle> _contentArticles = List.generate(
-    20,
-    (index) => ContentArticle(
-      title: '文章標題 ${index + 1}',
-      author: '作者 ${index + 1}',
-      snippet: '這是文章 ${index + 1} 的部分內容預覽，點擊可以查看更多詳情。這段文字會長一點，用來模擬真實的文章摘要。',
-    ),
-  );
+  final List<ContentArticle> _contentArticles = []; // 先清空模擬數據
+
+  // NHK 文章相關狀態
+  List<NhkArticle> _nhkArticles = [];
+  bool _isLoadingArticles = true;
+  String? _articlesError;
+  final ArticleService _articleService = ArticleService();
 
   @override
   void initState() {
     super.initState();
     _fetchNewsData(); // 在 initState 中呼叫擷取新聞的方法
     _loadGroups(); // 在 initState 中呼叫載入群組的方法
+    _fetchNhkArticlesData(); // 呼叫獲取 NHK 文章的方法
   }
 
   Future<void> _fetchNewsData() async {
@@ -79,6 +82,32 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
       print("HomeScreen - Error fetching news: $e");
+    }
+  }
+
+  Future<void> _fetchNhkArticlesData() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingArticles = true;
+        _articlesError = null;
+      });
+    }
+    try {
+      final articles = await _articleService.fetchNhkArticles();
+      if (mounted) {
+        setState(() {
+          _nhkArticles = articles;
+          _isLoadingArticles = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _articlesError = e.toString();
+          _isLoadingArticles = false;
+        });
+      }
+      print("HomeScreen - Error fetching NHK articles: $e");
     }
   }
 
@@ -433,22 +462,90 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildArticlesSection() {
-    if (_contentArticles.isEmpty) {
-      return const Center(child: Text('目前沒有文章'));
+    if (_isLoadingArticles) {
+      return const Center(child: CircularProgressIndicator());
     }
+
+    if (_articlesError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            '無法載入文章:\n$_articlesError',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    }
+
+    if (_nhkArticles.isEmpty) {
+      return const Center(child: Text('目前沒有 NHK 文章'));
+    }
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _contentArticles.length,
+      itemCount: _nhkArticles.length,
       itemBuilder: (context, index) {
-        final article = _contentArticles[index];
-        return ArticleListItemWidget(
-          article: article,
+        final article = _nhkArticles[index];
+        return ListTile(
+          title: Text(article.title),
+          subtitle: Text(article.publishedDate), // 您可以格式化此日期
+          leading:
+              article.imageUrl != null && article.imageUrl!.isNotEmpty
+                  ? SizedBox(
+                    // 使用 SizedBox 控制圖片大小
+                    width: 80, // 圖片寬度
+                    height: 60, // 圖片高度
+                    child: Image.network(
+                      article.imageUrl!,
+                      fit: BoxFit.cover, // 圖片填充方式
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.broken_image,
+                          size: 40,
+                        ); // 圖片載入失敗時顯示
+                      },
+                      loadingBuilder: (
+                        BuildContext context,
+                        Widget child,
+                        ImageChunkEvent? loadingProgress,
+                      ) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value:
+                                loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                  : const Icon(Icons.article_outlined, size: 40), // 沒有圖片時顯示預設圖示
+          trailing: const Icon(Icons.arrow_forward_ios),
           onTap: () {
-            print('Tapped on article: ${article.title}');
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('點擊了: ${article.title}')));
+            print('Tapped on NHK article: ${article.title}');
+            print('URL: ${article.pageUrl}');
+            if (article.pageUrl.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => ArticleWebViewScreen(
+                        url: article.pageUrl,
+                        title: article.title, // 將標題傳遞給 WebView 畫面
+                      ),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('文章連結無效')));
+            }
           },
         );
       },

@@ -1,17 +1,41 @@
 import 'package:flutter/material.dart';
 import '../models/learning_set.dart';
+import 'learning_set_detail_screen.dart';
 
 // 模擬的學習集資料 (之後會從 API 或本地資料庫獲取)
 final List<LearningSet> _allLearningSets = [
+  // JLPT 單字集 (保留 category、title 與 color)
+  LearningSet(
+    id: 'jlpt_n1_vocab',
+    title: 'JLPT N1 單字集',
+    category: 'JLPT',
+    color: Colors.blue,
+  ),
+  LearningSet(
+    id: 'jlpt_n2_vocab',
+    title: 'JLPT N2 單字集',
+    category: 'JLPT',
+    color: Colors.green,
+  ),
+  LearningSet(
+    id: 'jlpt_n3_vocab',
+    title: 'JLPT N3 單字集',
+    category: 'JLPT',
+    color: Colors.orange,
+  ),
+  LearningSet(
+    id: 'jlpt_n4_vocab',
+    title: 'JLPT N4 單字集',
+    category: 'JLPT',
+    color: Colors.red,
+  ),
   LearningSet(
     id: 'jlpt_n5_vocab',
-    title: 'JLPT N5 核心詞彙',
-    description: 'N5考試必備的基礎詞彙集合。',
-    author: 'JLPT官方',
-    itemCount: 150,
+    title: 'JLPT N5 單字集',
     category: 'JLPT',
-    imageUrl: 'https://via.placeholder.com/150/771796/FFFFFF?Text=N5',
+    color: Colors.purple,
   ),
+  // 其他分類保持不變
   LearningSet(
     id: 'minna_1_vocab',
     title: '大家的日本語 第1課 單字',
@@ -19,7 +43,7 @@ final List<LearningSet> _allLearningSets = [
     author: '教材同步',
     itemCount: 30,
     category: '教科書',
-    imageUrl: 'https://via.placeholder.com/150/2EB8E6/FFFFFF?Text=教科書',
+    color: Colors.cyan,
   ),
   LearningSet(
     id: 'travel_phrases',
@@ -28,16 +52,7 @@ final List<LearningSet> _allLearningSets = [
     author: '旅行達人',
     itemCount: 50,
     category: '生活',
-    imageUrl: 'https://via.placeholder.com/150/FF5733/FFFFFF?Text=旅行',
-  ),
-  LearningSet(
-    id: 'tech_terms_jp',
-    title: '科技業日文術語',
-    description: 'IT和科技領域常見的日文專業詞彙。',
-    author: '業界整理',
-    itemCount: 100,
-    category: '專業領域',
-    imageUrl: 'https://via.placeholder.com/150/33FFBD/000000?Text=科技',
+    color: Colors.deepOrange,
   ),
   LearningSet(
     id: 'user_set_food',
@@ -46,31 +61,7 @@ final List<LearningSet> _allLearningSets = [
     author: '使用者A',
     itemCount: 25,
     category: '使用者分享',
-  ),
-  LearningSet(
-    id: 'jlpt_n4_kanji',
-    title: 'JLPT N4 漢字練習',
-    description: 'N4等級常見漢字及其讀音、例句。',
-    author: 'JLPT官方',
-    itemCount: 200,
-    category: 'JLPT',
-    imageUrl: 'https://via.placeholder.com/150/771796/FFFFFF?Text=N4',
-  ),
-  LearningSet(
-    id: 'jlpt_n5_grammar',
-    title: 'JLPT N5 文法重點',
-    description: 'N5考試常見文法點整理。',
-    author: 'JLPT官方',
-    itemCount: 50,
-    category: 'JLPT',
-  ),
-  LearningSet(
-    id: 'daily_conversation',
-    title: '日常會話練習',
-    description: '模擬各種日常情境的對話練習。',
-    author: '會話練習',
-    itemCount: 60,
-    category: '生活',
+    color: Colors.grey,
   ),
 ];
 
@@ -92,48 +83,23 @@ class LearningSetGridItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.stretch, // Make children stretch horizontally
+          crossAxisAlignment: CrossAxisAlignment.stretch, // 使內部元件水平延展
           children: <Widget>[
-            // Image section
+            // 使用色彩取代圖片
             Expanded(
-              flex: 3, // Adjust flex to control image height relative to text
-              child:
-                  learningSet.imageUrl != null &&
-                          learningSet.imageUrl!.isNotEmpty
-                      ? Image.network(
-                        learningSet.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[200],
-                            child: Center(
-                              child: Icon(
-                                Icons.broken_image,
-                                color: Colors.grey[600],
-                                size: 30,
-                              ),
-                            ),
-                          );
-                        },
-                      )
-                      : Container(
-                        // Placeholder if no image
-                        color: Theme.of(
-                          context,
-                        ).primaryColorLight.withOpacity(0.3),
-                        child: Center(
-                          child: Icon(
-                            Icons.school_outlined,
-                            size: 40,
-                            color: Theme.of(
-                              context,
-                            ).primaryColor.withOpacity(0.7),
-                          ),
-                        ),
-                      ),
+              flex: 3,
+              child: Container(
+                color: learningSet.color,
+                child: const Center(
+                  child: Icon(
+                    Icons.school_outlined,
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
-            // Text section
+            // 文字區段
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
@@ -224,12 +190,12 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 
   void _navigateToLearningSetDetail(LearningSet set) {
-    // TODO: 導航到學習集詳細頁面
-    print('Navigating to: ${set.title}');
-    ScaffoldMessenger.of(
+    Navigator.push(
       context,
-    ).showSnackBar(SnackBar(content: Text('點擊了學習集: ${set.title}')));
-    // Navigator.push(context, MaterialPageRoute(builder: (context) => LearningSetDetailScreen(learningSet: set)));
+      MaterialPageRoute(
+        builder: (context) => LearningSetDetailScreen(learningSet: set),
+      ),
+    );
   }
 
   @override

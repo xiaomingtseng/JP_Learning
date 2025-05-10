@@ -11,37 +11,41 @@ class NewsService {
 
       if (response.statusCode == 200) {
         final String responseBody = utf8.decode(response.bodyBytes);
-        // API 回傳的是一個 List，其中包含一個 Map (或多個，如果 API 設計如此)
-        // 每個 Map 的 key 是日期，value 是新聞列表
         final List<dynamic> rootList = json.decode(responseBody);
+        List<NewsArticle> articles = [];
+        // 計算三天前的日期
+        final DateTime threshold = DateTime.now().subtract(
+          const Duration(days: 10),
+        );
 
-        if (rootList.isNotEmpty) {
-          // 我們假設只處理第一個日期分組的物件
-          // 這個物件是一個 Map<String, List<dynamic>>
-          final Map<String, dynamic> dateGroupMap =
-              rootList[0] as Map<String, dynamic>;
-
-          if (dateGroupMap.keys.isNotEmpty) {
-            // 取得第一個日期鍵 (例如 "2025-05-09")
-            final String dateKey = dateGroupMap.keys.first;
-            // 取得該日期下的新聞列表 (List<dynamic>)
-            final List<dynamic> newsListJson =
-                dateGroupMap[dateKey] as List<dynamic>;
-
-            List<NewsArticle> articles =
-                newsListJson
-                    .map(
-                      (item) =>
-                          NewsArticle.fromJson(item as Map<String, dynamic>),
-                    )
-                    .toList();
-            return articles;
-          } else {
-            return []; // 日期分組的 Map 為空
+        // 遍歷每個日期分組
+        for (final group in rootList) {
+          if (group is Map<String, dynamic>) {
+            group.forEach((dateKey, newsList) {
+              try {
+                final DateTime newsDate = DateTime.parse(dateKey);
+                // 如果日期在三天以內（包含三天前當天）
+                if (newsDate.isAfter(threshold) ||
+                    newsDate.isAtSameMomentAs(threshold)) {
+                  if (newsList is List<dynamic>) {
+                    articles.addAll(
+                      newsList
+                          .map(
+                            (item) => NewsArticle.fromJson(
+                              item as Map<String, dynamic>,
+                            ),
+                          )
+                          .toList(),
+                    );
+                  }
+                }
+              } catch (e) {
+                print("日期解析錯誤，日期: $dateKey, 異常: $e");
+              }
+            });
           }
-        } else {
-          return []; // API 回傳的根列表為空
         }
+        return articles;
       } else {
         throw Exception('無法載入新聞: ${response.statusCode}');
       }

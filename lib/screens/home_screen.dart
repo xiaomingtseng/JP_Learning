@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/function_icons_row.dart';
 import '../widgets/news_card_widget.dart';
-import '../widgets/article_list_item_widget.dart';
+// import '../widgets/article_list_item_widget.dart';
 import '../models/news_article.dart';
-import '../models/content_article.dart';
+// import '../models/content_article.dart';
 import '../services/news_service.dart'; // 匯入 NewsService
 import '../models/note_models.dart';
 import '../services/note_service.dart';
@@ -17,6 +17,7 @@ import 'learning_screen.dart';
 import 'dictionary_screen.dart';
 import 'notebooks_screen.dart'; // 匯入 NotebooksScreen
 import 'article_webview_screen.dart'; // 匯入 ArticleWebViewScreen
+import 'dart:async'; // 匯入 Timer 所需的包
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,9 +30,13 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchText = "";
   int _selectedIndex = 0;
 
-  List<NewsArticle> _newsItems = []; // 初始化為空列表
-  bool _isLoadingNews = true; // 新聞載入狀態
-  String? _newsError; // 新聞載入錯誤訊息
+  List<NewsArticle> _newsItems = [];
+  bool _isLoadingNews = true;
+  String? _newsError;
+
+  // 新增控制 PageView 自動輪播用的變數
+  late final PageController _newsPageController;
+  Timer? _newsTimer;
 
   final NewsService _newsService = NewsService(); // 建立 NewsService 實例
 
@@ -39,8 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Group> _groups = [];
   bool _isLoading = true;
   String? _errorMessage;
-
-  final List<ContentArticle> _contentArticles = []; // 先清空模擬數據
 
   // NHK 文章相關狀態
   List<NhkArticle> _nhkArticles = [];
@@ -51,13 +54,37 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // 初始化 PageController (viewportFraction 與原本使用 PageView.builder 保持一致)
+    _newsPageController = PageController(viewportFraction: 0.9);
+
     _fetchNewsData(); // 在 initState 中呼叫擷取新聞的方法
     _loadGroups(); // 在 initState 中呼叫載入群組的方法
     _fetchNhkArticlesData(); // 呼叫獲取 NHK 文章的方法
+
+    // 設定每 5 秒自動切換新聞頁面
+    _newsTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_newsItems.isNotEmpty && _newsPageController.hasClients) {
+        int nextPage = _newsPageController.page!.round() + 1;
+        if (nextPage >= _newsItems.length) {
+          nextPage = 0;
+        }
+        _newsPageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeIn,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _newsTimer?.cancel();
+    _newsPageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchNewsData() async {
-    // 只有在 widget 仍然 mounted 時才設定載入狀態
     if (mounted) {
       setState(() {
         _isLoadingNews = true;
@@ -66,7 +93,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     try {
       final articles = await _newsService.fetchNewsArticles();
-      // 檢查 widget 是否仍然 mounted
       if (mounted) {
         setState(() {
           _newsItems = articles;
@@ -74,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      // 檢查 widget 是否仍然 mounted
       if (mounted) {
         setState(() {
           _newsError = e.toString();
@@ -112,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadGroups() async {
-    // 只有在 widget 仍然 mounted 時才設定初始載入狀態
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -121,7 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     try {
       final groups = await _noteService.getAllGroups();
-      // 檢查 widget 是否仍然 mounted
       if (mounted) {
         setState(() {
           _groups = groups;
@@ -129,7 +152,6 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      // 檢查 widget 是否仍然 mounted
       if (mounted) {
         setState(() {
           _errorMessage = '載入群組失敗: $e';
@@ -270,7 +292,6 @@ class _HomeScreenState extends State<HomeScreen> {
           leading: const Icon(Icons.folder_open_outlined), // 群組圖示
           trailing: const Icon(Icons.arrow_forward_ios),
           onTap: () {
-            // 導航到 NotebooksScreen
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -347,15 +368,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPlaceholderPage(String title) {
-    return Center(
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final List<Widget> widgetOptions = <Widget>[
@@ -411,8 +423,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        // selectedItemColor: Theme.of(context).primaryColor,
-        // unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
@@ -451,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return SizedBox(
       height: 180, // 您可以根據 NewsCardWidget 的內容調整此高度
       child: PageView.builder(
-        controller: PageController(viewportFraction: 0.9),
+        controller: _newsPageController,
         itemCount: _newsItems.length,
         itemBuilder: (context, index) {
           final news = _newsItems[index];

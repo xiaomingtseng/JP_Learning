@@ -20,6 +20,8 @@ dependencies:
   ruby_text: ^3.0.3
   audioplayers: ^6.4.0
   uuid: ^4.5.1
+  translator: ^1.0.3+1
+  flutter_tts: 4.2.2
 
 dev_dependencies:
   flutter_test:

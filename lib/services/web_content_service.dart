@@ -51,4 +51,48 @@ class WebContentService {
       throw Exception('無法抓取新聞內容: $e');
     }
   }
+
+  Future<String> fetchEasyArticleContentById(String newsId) async {
+    if (newsId.isEmpty) {
+      throw Exception('News ID 為空。');
+    }
+
+    // 根據 news_id 建構 NHK Easy 新聞的 URL
+    // 例如 news_id: "ne2025050911353"
+    // URL: "https://www3.nhk.or.jp/news/easy/ne2025050911353/ne2025050911353.html"
+    final String easyArticleUrl =
+        "https://www3.nhk.or.jp/news/easy/$newsId/$newsId.html";
+
+    try {
+      final response = await http.get(Uri.parse(easyArticleUrl));
+      if (response.statusCode == 200) {
+        final responseBody = utf8.decode(response.bodyBytes);
+        final document = html_parser.parse(responseBody);
+
+        // 新的 CSS 選擇器
+        final articleBodyDiv = document.querySelector('div.article-body');
+
+        if (articleBodyDiv != null) {
+          final paragraphs = articleBodyDiv.querySelectorAll('p');
+          if (paragraphs.isNotEmpty) {
+            return paragraphs
+                .map((p) => p.text.trim()) // .text 會取得純文字內容
+                .where((text) => text.isNotEmpty) // 過濾掉空的段落
+                .join('\n\n'); // 用兩個換行符分隔段落
+          } else {
+            return '在 class="article-body" 中未找到 <p> 標籤。';
+          }
+        } else {
+          return '無法找到 class="article-body" 的 div 元素。請檢查網頁結構或 News ID。';
+        }
+      } else {
+        throw Exception(
+          '無法載入 NHK Easy 新聞頁面 (ID: $newsId)，狀態碼: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('抓取 NHK Easy 新聞內容 (ID: $newsId) 時發生錯誤: $e');
+      throw Exception('無法抓取 NHK Easy 新聞內容: $e');
+    }
+  }
 }

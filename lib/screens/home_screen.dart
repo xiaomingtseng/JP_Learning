@@ -6,11 +6,14 @@ import '../widgets/article_list_item_widget.dart';
 import '../models/news_article.dart';
 import '../models/content_article.dart';
 import '../services/news_service.dart'; // 匯入 NewsService
+import '../models/note_models.dart';
+import '../services/note_service.dart';
 import 'account_screen.dart';
 import 'settings_screen.dart';
 import 'translate_screen.dart';
 import 'learning_screen.dart';
 import 'dictionary_screen.dart';
+import 'notebooks_screen.dart'; // 匯入 NotebooksScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final NewsService _newsService = NewsService(); // 建立 NewsService 實例
 
+  final NoteService _noteService = NoteService(); // 建立 NoteService 實例
+  List<Group> _groups = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
   final List<ContentArticle> _contentArticles = List.generate(
     20,
     (index) => ContentArticle(
@@ -42,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchNewsData(); // 在 initState 中呼叫擷取新聞的方法
+    _loadGroups(); // 在 initState 中呼叫載入群組的方法
   }
 
   Future<void> _fetchNewsData() async {
@@ -73,6 +82,94 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadGroups() async {
+    // 只有在 widget 仍然 mounted 時才設定初始載入狀態
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+    try {
+      final groups = await _noteService.getAllGroups();
+      // 檢查 widget 是否仍然 mounted
+      if (mounted) {
+        setState(() {
+          _groups = groups;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // 檢查 widget 是否仍然 mounted
+      if (mounted) {
+        setState(() {
+          _errorMessage = '載入群組失敗: $e';
+          _isLoading = false;
+        });
+      }
+      print('載入群組時發生錯誤: $e');
+    }
+  }
+
+  Future<void> _addGroup() async {
+    final TextEditingController nameController = TextEditingController();
+    final groupName = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('新增群組'),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: '群組名稱'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('取消'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('新增'),
+              onPressed: () {
+                if (nameController.text.trim().isNotEmpty) {
+                  Navigator.of(context).pop(nameController.text.trim());
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (groupName != null && groupName.isNotEmpty) {
+      setState(() {
+        _isLoading = true; // 顯示載入指示器
+      });
+      try {
+        final newGroup = await _noteService.createGroup(groupName);
+        if (newGroup != null) {
+          await _loadGroups(); // 重新載入群組列表
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('新增群組失敗')));
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('新增群組時發生錯誤: $e')));
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   void _handleSearch(String searchText) {
     setState(() {
       _searchText = searchText;
@@ -98,9 +195,72 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onNotebookPressed() {
     print("Notebook icon pressed");
-    ScaffoldMessenger.of(
+    Navigator.push(
       context,
-    ).showSnackBar(const SnackBar(content: Text('筆記本功能')));
+      MaterialPageRoute(
+        builder:
+            (context) => Scaffold(
+              appBar: AppBar(title: const Text('我的筆記群組')),
+              body: _buildNotebookBody(),
+              floatingActionButton: FloatingActionButton(
+                onPressed: _addGroup,
+                tooltip: '新增群組',
+                child: const Icon(Icons.add),
+              ),
+            ),
+      ),
+    );
+  }
+
+  Widget _buildNotebookBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(_errorMessage!),
+            ElevatedButton(onPressed: _loadGroups, child: const Text('重試')),
+          ],
+        ),
+      );
+    }
+    if (_groups.isEmpty) {
+      return const Center(
+        child: Text('目前沒有群組。\n點擊右下角按鈕新增一個吧！', textAlign: TextAlign.center),
+      );
+    }
+    return ListView.builder(
+      itemCount: _groups.length,
+      itemBuilder: (context, index) {
+        final group = _groups[index];
+        return ListTile(
+          title: Text(group.name),
+          leading: const Icon(Icons.folder_open_outlined), // 群組圖示
+          trailing: const Icon(Icons.arrow_forward_ios),
+          onTap: () {
+            // 導航到 NotebooksScreen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => NotebooksScreen(
+                      groupId: group.id,
+                      groupName: group.name,
+                      noteService: _noteService, // 傳遞 NoteService 實例
+                    ),
+              ),
+            ).then((_) {
+              // 從 NotebooksScreen 返回後，可以選擇性地重新載入群組
+              // 例如，如果 NotebooksScreen 中有刪除群組的功能
+              // _loadGroups();
+            });
+          },
+        );
+      },
+    );
   }
 
   void _onCameraPressed() {

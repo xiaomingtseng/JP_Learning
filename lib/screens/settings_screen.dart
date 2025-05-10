@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: Theme.of(context).primaryColorDark,
+          // color: Theme.of(context).primaryColorDark,
         ),
       ),
     );

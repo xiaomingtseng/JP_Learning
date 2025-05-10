@@ -88,7 +88,7 @@ class _AccountScreenState extends State<AccountScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            Icon(icon, size: 30.0, color: Theme.of(context).primaryColor),
+            Icon(icon, size: 30.0),
             const SizedBox(height: 8.0),
             Text(
               value,

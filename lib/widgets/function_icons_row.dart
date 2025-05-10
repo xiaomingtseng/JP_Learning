@@ -26,7 +26,7 @@ class FunctionIconsRow extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(icon, size: 30.0, color: Theme.of(context).primaryColor),
+            Icon(icon, size: 30.0),
             const SizedBox(height: 4),
             Text(label, style: const TextStyle(fontSize: 12)),
           ],

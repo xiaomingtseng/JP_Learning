@@ -5,11 +5,12 @@ import '../widgets/news_card_widget.dart';
 import '../widgets/article_list_item_widget.dart';
 import '../models/news_article.dart';
 import '../models/content_article.dart';
+import '../services/news_service.dart'; // 匯入 NewsService
 import 'account_screen.dart';
 import 'settings_screen.dart';
 import 'translate_screen.dart';
 import 'learning_screen.dart';
-import 'dictionary_screen.dart'; // 匯入 DictionaryScreen
+import 'dictionary_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,23 +23,11 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchText = "";
   int _selectedIndex = 0;
 
-  final List<NewsArticle> _newsItems = [
-    NewsArticle(
-      title: '新聞標題 1',
-      summary: '這是第一條重要新聞的簡短摘要...',
-      imageUrl: 'https://via.placeholder.com/350x150?text=News+1',
-    ),
-    NewsArticle(
-      title: '新聞標題 2',
-      summary: '這是第二條新聞的內容概要，非常吸引人。',
-      imageUrl: 'https://via.placeholder.com/350x150?text=News+2',
-    ),
-    NewsArticle(
-      title: '新聞標題 3',
-      summary: '第三條新聞報導了最新的科技發展。',
-      imageUrl: 'https://via.placeholder.com/350x150?text=News+3',
-    ),
-  ];
+  List<NewsArticle> _newsItems = []; // 初始化為空列表
+  bool _isLoadingNews = true; // 新聞載入狀態
+  String? _newsError; // 新聞載入錯誤訊息
+
+  final NewsService _newsService = NewsService(); // 建立 NewsService 實例
 
   final List<ContentArticle> _contentArticles = List.generate(
     20,
@@ -48,6 +37,41 @@ class _HomeScreenState extends State<HomeScreen> {
       snippet: '這是文章 ${index + 1} 的部分內容預覽，點擊可以查看更多詳情。這段文字會長一點，用來模擬真實的文章摘要。',
     ),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNewsData(); // 在 initState 中呼叫擷取新聞的方法
+  }
+
+  Future<void> _fetchNewsData() async {
+    // 只有在 widget 仍然 mounted 時才設定載入狀態
+    if (mounted) {
+      setState(() {
+        _isLoadingNews = true;
+        _newsError = null;
+      });
+    }
+    try {
+      final articles = await _newsService.fetchNewsArticles();
+      // 檢查 widget 是否仍然 mounted
+      if (mounted) {
+        setState(() {
+          _newsItems = articles;
+          _isLoadingNews = false;
+        });
+      }
+    } catch (e) {
+      // 檢查 widget 是否仍然 mounted
+      if (mounted) {
+        setState(() {
+          _newsError = e.toString();
+          _isLoadingNews = false;
+        });
+      }
+      print("HomeScreen - Error fetching news: $e");
+    }
+  }
 
   void _handleSearch(String searchText) {
     setState(() {
@@ -100,18 +124,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomePageContent() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
           FunctionIconsRow(
             onNotebookPressed: _onNotebookPressed,
             onCameraPressed: _onCameraPressed,
             onMicPressed: _onMicPressed,
           ),
           const SizedBox(height: 20),
+          const Text(
+            '每日新聞',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
           _buildNewsSection(),
           const SizedBox(height: 20),
           const Text(
@@ -119,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          Expanded(child: _buildArticlesSection()),
+          _buildArticlesSection(),
           if (_searchText.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 16.0),
@@ -204,8 +232,35 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNewsSection() {
+    if (_isLoadingNews) {
+      return const SizedBox(
+        height: 180, // 與 PageView 高度一致
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_newsError != null) {
+      return SizedBox(
+        height: 180,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              '無法載入新聞:\n$_newsError',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_newsItems.isEmpty) {
+      return const SizedBox(height: 180, child: Center(child: Text('目前沒有新聞')));
+    }
+
     return SizedBox(
-      height: 180,
+      height: 180, // 您可以根據 NewsCardWidget 的內容調整此高度
       child: PageView.builder(
         controller: PageController(viewportFraction: 0.9),
         itemCount: _newsItems.length,
@@ -222,6 +277,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(child: Text('目前沒有文章'));
     }
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: _contentArticles.length,
       itemBuilder: (context, index) {
         final article = _contentArticles[index];

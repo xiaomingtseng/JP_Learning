@@ -27,7 +27,7 @@ android {
         applicationId = "com.example.jp_learning"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23 // <--- 修改或新增這一行 (注意是 minSdk 而不是 minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

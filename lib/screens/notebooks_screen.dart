@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/note_models.dart';
 import '../services/note_service.dart'; // 確保路徑正確
+import 'notes_list_screen.dart'; // 匯入 NotesListScreen
+import '../services/word_service.dart'; // 匯入 WordService
 
 class NotebooksScreen extends StatefulWidget {
   final String groupId;
@@ -161,9 +163,20 @@ class _NotebooksScreenState extends State<NotebooksScreen> {
           title: Text(notebook.name),
           leading: const Icon(Icons.book_outlined), // 筆記本圖示
           onTap: () {
-            // TODO: 導航到筆記本的詳細內容頁面
             print('點擊了筆記本: ${notebook.name} (ID: ${notebook.id})');
-            // Navigator.push(context, MaterialPageRoute(builder: (context) => NotesListScreen(notebookId: notebook.id, notebookName: notebook.name)));
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => NotesListScreen(
+                      groupId: widget.groupId, // 新增傳遞 groupId
+                      notebookId: notebook.id,
+                      notebookName: notebook.name,
+                      noteService: widget.noteService,
+                      wordService: WordService(), // 建立 WordService 實例
+                    ),
+              ),
+            );
           },
           // 可以加入長按刪除或編輯的功能
         );

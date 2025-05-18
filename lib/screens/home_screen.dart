@@ -195,13 +195,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (groupName != null && groupName.isNotEmpty) {
+      if (!mounted) return; // Check mounted state before async operation
       setState(() {
         _isLoading = true; // 顯示載入指示器
       });
       try {
         final newGroup = await _noteService.createGroup(groupName);
+        if (!mounted) return; // Check mounted state after async operation
         if (newGroup != null) {
-          await _loadGroups(); // 重新載入群組列表
+          await _loadGroups(); // _loadGroups has its own mounted checks
         } else {
           ScaffoldMessenger.of(
             context,
@@ -211,9 +213,17 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('新增群組時發生錯誤: $e')));
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      // Ensure isLoading is set to false if still mounted and not handled by _loadGroups
+      if (mounted && _isLoading) {
+        // Check _isLoading because _loadGroups might have already set it to false
         setState(() {
           _isLoading = false;
         });

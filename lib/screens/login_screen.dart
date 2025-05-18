@@ -1,23 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   Future<void> _signInWithGoogle(BuildContext context) async {
     try {
-      // 初始化 GoogleSignIn
       final GoogleSignIn googleSignIn = GoogleSignIn();
-
-      // 強制登出之前的帳戶，確保每次登入都能選擇帳戶
-      await googleSignIn.signOut();
-
-      // 開始 Google 登入流程
+      await googleSignIn.signOut(); // 確保每次登入都能選擇帳戶
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
-        // 使用者取消登入
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
@@ -26,37 +21,89 @@ class LoginScreen extends StatelessWidget {
         return;
       }
 
-      // 取得 Google Auth 憑證
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // 建立 Firebase 憑證
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 使用 Firebase 憑證登入
       final UserCredential userCredential = await FirebaseAuth.instance
           .signInWithCredential(credential);
 
-      // 登入成功後顯示訊息
-      final String? userEmailFromFirebase = userCredential.user?.email;
+      final String? userId =
+          userCredential.user?.email ?? userCredential.user?.uid;
+
+      if (userId != null) {
+        // 更新 Firestore 中的登入資料
+        await _updateLoginData(userId);
+      }
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Google 登入成功: ${userEmailFromFirebase ?? 'N/A'}'),
-          ),
+          SnackBar(content: Text('Google 登入成功: ${userId ?? 'N/A'}')),
         );
       }
     } catch (e) {
-      // 處理登入錯誤
       print('Google Sign-In Error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Google 登入失敗: ${e.toString()}')));
       }
+    }
+  }
+
+  Future<void> _updateLoginData(String userId) async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final DocumentReference userDoc = firestore.collection('users').doc(userId);
+
+    final DateTime today = DateTime.now();
+    final String todayString =
+        today.toIso8601String().split('T').first; // 只取日期部分
+
+    try {
+      final DocumentSnapshot docSnapshot = await userDoc.get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        final String? lastLoginDate = data['lastLoginDate'];
+        final int consecutiveLoginDays = data['consecutiveLoginDays'] ?? 0;
+
+        if (lastLoginDate != null) {
+          final DateTime lastLogin = DateTime.parse(lastLoginDate);
+
+          // 判斷是否為連續登入
+          if (today.difference(lastLogin).inDays == 1) {
+            // 連續登入
+            await userDoc.update({
+              'lastLoginDate': todayString,
+              'consecutiveLoginDays': consecutiveLoginDays + 1,
+            });
+          } else if (today.difference(lastLogin).inDays > 1) {
+            // 中斷連續登入
+            await userDoc.update({
+              'lastLoginDate': todayString,
+              'consecutiveLoginDays': 1,
+            });
+          }
+        } else {
+          // 第一次登入
+          await userDoc.update({
+            'lastLoginDate': todayString,
+            'consecutiveLoginDays': 1,
+          });
+        }
+      } else {
+        // 如果文件不存在，創建新文件
+        await userDoc.set({
+          'lastLoginDate': todayString,
+          'consecutiveLoginDays': 1,
+        });
+      }
+    } catch (e) {
+      print('更新登入資料失敗: $e');
     }
   }
 
@@ -82,10 +129,6 @@ class LoginScreen extends StatelessWidget {
               label: const Text('使用 Google 登入'),
               onPressed: () {
                 _signInWithGoogle(context); // 直接呼叫登入方法
-                // 下面這行已不再需要，因為 _signInWithGoogle 方法會處理回饋
-                // ScaffoldMessenger.of(context).showSnackBar(
-                //   const SnackBar(content: Text('Google 登入功能待實作')),
-                // );
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(

@@ -37,8 +37,10 @@ class NoteService {
   // 創建一個新的群組，並綁定到目前使用者
   Future<Group?> createGroup(String name) async {
     final userId = getCurrentUserId();
-    if (userId == null) {
-      print('使用者未登入，無法建立群組');
+    final userEmail = _auth.currentUser?.email; // 獲取使用者 email
+
+    if (userId == null || userEmail == null) {
+      print('使用者未登入或 Email 為空，無法建立群組');
       return null; // 或者拋出錯誤
     }
 
@@ -47,6 +49,7 @@ class NoteService {
       id: newGroupId,
       name: name,
       userId: userId, // 設定 userId
+      owner: userEmail, // 設定 owner 為使用者 email
       notebooks: [],
       // createdAt: DateTime.now(),
     );
@@ -138,6 +141,82 @@ class NoteService {
     } catch (e) {
       print('在群組 $groupId 中新增筆記本 "$notebookName" 時發生錯誤: $e');
       return null;
+    }
+  }
+
+  // 根據 Notebook ID 獲取 Notebook 詳細資訊 (包含單字)
+  Future<Notebook?> getNotebookById(String groupId, String notebookId) async {
+    final userId = getCurrentUserId();
+    if (userId == null) {
+      print('使用者未登入');
+      return null;
+    }
+    try {
+      final group = await findGroupById(
+        groupId,
+      ); // findGroupById 已經做了 userId 檢查
+      if (group == null) {
+        print('找不到群組 $groupId 或無權限');
+        return null;
+      }
+      // 從群組的筆記本列表中尋找特定的筆記本
+      final notebook = group.notebooks.firstWhere(
+        (nb) => nb.id == notebookId,
+        orElse: () {
+          // 當找不到筆記本時，印出訊息並返回一個標記用的 Notebook 或 null
+          // 這裡我們返回 null，讓呼叫者知道沒找到
+          print('在群組 $groupId 中找不到筆記本 $notebookId');
+          return Notebook(
+            id: '',
+            name: '',
+          ); // 返回一個無效的 Notebook 以符合 firstWhere 的回傳型別要求，但下方會轉為 null
+        },
+      );
+      // 如果 orElse 被觸發，notebook.id 會是 ''
+      if (notebook.id == '') {
+        return null;
+      }
+      return notebook;
+    } catch (e) {
+      print('獲取筆記本 $notebookId (群組 $groupId) 時發生錯誤: $e');
+      return null;
+    }
+  }
+
+  // 更新指定的筆記本 (例如新增單字後)
+  Future<void> updateNotebook(String groupId, Notebook updatedNotebook) async {
+    final userId = getCurrentUserId();
+    if (userId == null) {
+      print('使用者未登入，無法更新筆記本');
+      return; // 或者拋出錯誤
+    }
+
+    final groupDocRef = _firestore.collection(_groupsCollection).doc(groupId);
+
+    try {
+      final groupSnapshot = await groupDocRef.get();
+      if (!groupSnapshot.exists) {
+        print('錯誤：找不到 ID 為 $groupId 的群組。');
+        return;
+      }
+      final group = Group.fromJson(groupSnapshot.data()!);
+      if (group.userId != userId) {
+        print('權限錯誤：使用者 $userId 無權修改群組 $groupId 中的筆記本');
+        return;
+      }
+
+      // 更新 notebooks 列表
+      final updatedNotebooks =
+          group.notebooks.map((nb) {
+            return nb.id == updatedNotebook.id ? updatedNotebook : nb;
+          }).toList();
+
+      await groupDocRef.update({
+        'notebooks': updatedNotebooks.map((nb) => nb.toJson()).toList(),
+      });
+      print('筆記本 ${updatedNotebook.id} (群組 $groupId) 更新成功');
+    } catch (e) {
+      print('更新筆記本 ${updatedNotebook.id} (群組 $groupId) 時發生錯誤: $e');
     }
   }
 

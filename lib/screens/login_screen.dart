@@ -7,9 +7,13 @@ class LoginScreen extends StatelessWidget {
 
   Future<void> _signInWithGoogle(BuildContext context) async {
     try {
-      // 1. 初始化 GoogleSignIn
-      // 您可以指定 scopes，例如 GoogleSignIn(scopes: ['email'])，但 'email' 通常是預設的。
+      // 初始化 GoogleSignIn
       final GoogleSignIn googleSignIn = GoogleSignIn();
+
+      // 強制登出之前的帳戶，確保每次登入都能選擇帳戶
+      await googleSignIn.signOut();
+
+      // 開始 Google 登入流程
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
@@ -22,33 +26,22 @@ class LoginScreen extends StatelessWidget {
         return;
       }
 
-      // 2. 直接從 googleUser 取得 Email
-      final String? userEmailFromGoogle = googleUser.email;
-      print('Google User Email: $userEmailFromGoogle');
-
-      // 3. 取得 Google Auth 憑證 (包含 idToken 和 accessToken)
+      // 取得 Google Auth 憑證
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // idToken 是一個 JWT，其中包含 email 等資訊。
-      // print('Google ID Token: ${googleAuth.idToken}');
-
-      // 4. 建立 Firebase 憑證
+      // 建立 Firebase 憑證
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 5. 使用 Firebase 憑證登入
+      // 使用 Firebase 憑證登入
       final UserCredential userCredential = await FirebaseAuth.instance
           .signInWithCredential(credential);
 
-      // 6. 從 Firebase User 物件取得 Email
+      // 登入成功後顯示訊息
       final String? userEmailFromFirebase = userCredential.user?.email;
-      print('Firebase User Email: $userEmailFromFirebase');
-
-      // 登入成功後，main.dart 中的 StreamBuilder 會自動處理導航到 HomeScreen
-      // 您可以在此處顯示成功訊息
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

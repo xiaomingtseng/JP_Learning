@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // 匯入 Firebase Auth
+import '../services/user_service.dart';
 
 // 假設的使用者資料模型
 class UserProfile {
@@ -56,21 +57,85 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   late UserProfile _userProfile;
+  final UserService _userService = UserService();
 
   @override
   void initState() {
     super.initState();
-    final currentUser = FirebaseAuth.instance.currentUser;
     _userProfile = UserProfile(
-      name: currentUser?.displayName ?? '使用者名稱',
-      email: currentUser?.email ?? 'user@example.com', // Email 從 Firebase 獲取
-      avatarUrl: currentUser?.photoURL ?? 'https://via.placeholder.com/150',
-      likedArticlesCount: 15,
-      likedNewsCount: 5,
-      learnedWordsCount: 120,
-      learnedKanjiCount: 85,
-      consecutiveLoginDays: 7,
-    );
+      name: '使用者名稱',
+      email: 'user@example.com',
+      avatarUrl: 'https://via.placeholder.com/150',
+      likedArticlesCount: 0,
+      likedNewsCount: 0,
+      learnedWordsCount: 0,
+      learnedKanjiCount: 0,
+      consecutiveLoginDays: 0,
+    ); // 預設值
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      _initializeUserProfile(currentUser);
+    }
+  }
+
+  Future<void> _initializeUserProfile(User currentUser) async {
+    try {
+      final userId = currentUser.email ?? currentUser.uid;
+      final userExists = await _userService.checkUserExists(userId);
+
+      if (!userExists) {
+        // 創建使用者資料
+        await _userService.createUserProfile(
+          userId: userId,
+          name: currentUser.displayName ?? '使用者名稱',
+          email: currentUser.email ?? 'user@example.com',
+          avatarUrl: currentUser.photoURL ?? 'https://via.placeholder.com/150',
+        );
+      }
+
+      // 讀取使用者資料
+      final userData = await _userService.getUserProfile(userId);
+      if (userData != null) {
+        setState(() {
+          _userProfile = UserProfile(
+            name: userData['name'] ?? '使用者名稱',
+            email: userData['email'] ?? 'user@example.com',
+            avatarUrl:
+                userData['avatarUrl'] ?? 'https://via.placeholder.com/150',
+            likedArticlesCount: userData['likedArticlesCount'] ?? 0,
+            likedNewsCount: userData['likedNewsCount'] ?? 0,
+            learnedWordsCount: userData['learnedWordsCount'] ?? 0,
+            learnedKanjiCount: userData['learnedKanjiCount'] ?? 0,
+            consecutiveLoginDays: userData['consecutiveLoginDays'] ?? 0,
+          );
+        });
+      }
+    } catch (e) {
+      print('初始化使用者資料失敗: $e');
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    try {
+      await _userService.updateUserProfile(
+        userId: _userProfile.email, // or use another unique identifier
+        updatedData: {
+          'name': _userProfile.name,
+          'likedArticlesCount': _userProfile.likedArticlesCount,
+          'likedNewsCount': _userProfile.likedNewsCount,
+          'learnedWordsCount': _userProfile.learnedWordsCount,
+          'learnedKanjiCount': _userProfile.learnedKanjiCount,
+          'consecutiveLoginDays': _userProfile.consecutiveLoginDays,
+        },
+      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('個人資料已更新')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('更新失敗: $e')));
+    }
   }
 
   Widget _buildStatisticCard(
@@ -199,7 +264,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       setState(() {
                         _userProfile = _userProfile.copyWith(name: newValue);
                       });
-                      // FirebaseAuth.instance.currentUser?.updateDisplayName(newValue);
+                      _saveProfile();
                     });
                   },
                   child: Padding(

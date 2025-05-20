@@ -1,69 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/learning_set.dart';
 import 'learning_set_detail_screen.dart';
-
-// 模擬的學習集資料 (之後會從 API 或本地資料庫獲取)
-final List<LearningSet> _allLearningSets = [
-  // JLPT 單字集 (保留 category、title 與 color)
-  LearningSet(
-    id: 'jlpt_n1_vocab',
-    title: 'JLPT N1 單字集',
-    category: 'JLPT',
-    color: Colors.blue,
-  ),
-  LearningSet(
-    id: 'jlpt_n2_vocab',
-    title: 'JLPT N2 單字集',
-    category: 'JLPT',
-    color: Colors.green,
-  ),
-  LearningSet(
-    id: 'jlpt_n3_vocab',
-    title: 'JLPT N3 單字集',
-    category: 'JLPT',
-    color: Colors.orange,
-  ),
-  LearningSet(
-    id: 'jlpt_n4_vocab',
-    title: 'JLPT N4 單字集',
-    category: 'JLPT',
-    color: Colors.red,
-  ),
-  LearningSet(
-    id: 'jlpt_n5_vocab',
-    title: 'JLPT N5 單字集',
-    category: 'JLPT',
-    color: Colors.purple,
-  ),
-  // 其他分類保持不變
-  LearningSet(
-    id: 'minna_1_vocab',
-    title: '大家的日本語 第1課 單字',
-    description: '學習《大家的日本語》第一課的生詞。',
-    author: '教材同步',
-    itemCount: 30,
-    category: '教科書',
-    color: Colors.cyan,
-  ),
-  LearningSet(
-    id: 'travel_phrases',
-    title: '日本旅遊常用短句',
-    description: '包含問路、點餐、購物等實用短句。',
-    author: '旅行達人',
-    itemCount: 50,
-    category: '生活',
-    color: Colors.deepOrange,
-  ),
-  LearningSet(
-    id: 'user_set_food',
-    title: '我最愛的日本食物 (使用者分享)',
-    description: '使用者A分享的關於日本美食的單字集。',
-    author: '使用者A',
-    itemCount: 25,
-    category: '使用者分享',
-    color: Colors.grey,
-  ),
-];
+import '../services/learning_set_service.dart'; // 導入 LearningSetService
 
 class LearningSetGridItem extends StatelessWidget {
   final LearningSet learningSet;
@@ -142,27 +80,65 @@ class LearningScreen extends StatefulWidget {
 class _LearningScreenState extends State<LearningScreen> {
   Map<String, List<LearningSet>> _groupedAndFilteredSets = {};
   final TextEditingController _searchController = TextEditingController();
+  final LearningSetService _learningSetService =
+      LearningSetService(); // 實例化 Service
+  List<LearningSet> _masterLearningSets = []; // 用於存儲從 Service 獲取的原始數據
+  bool _isLoading = true; // 加載狀態
 
   @override
   void initState() {
     super.initState();
-    _performGroupingAndFiltering();
+    _loadLearningSets(); // 修改 initState 以調用新的加載方法
     _searchController.addListener(_performGroupingAndFiltering);
+  }
+
+  Future<void> _loadLearningSets() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      _masterLearningSets = await _learningSetService.fetchAllLearningSets();
+      _performGroupingAndFiltering(); // 獲取數據後立即進行分組和過濾
+    } catch (e) {
+      // 處理錯誤，例如顯示一個錯誤訊息
+      print('Error loading learning sets: $e');
+      if (mounted) {
+        // Check if the widget is still in the tree
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('無法載入學習集: $e')));
+      }
+    }
+    if (mounted) {
+      // Check if the widget is still in the tree
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _performGroupingAndFiltering() {
     final query = _searchController.text.toLowerCase();
     List<LearningSet> setsToProcess;
 
+    // 使用 _masterLearningSets 進行過濾
     if (query.isEmpty) {
-      setsToProcess = _allLearningSets;
+      setsToProcess = _masterLearningSets;
     } else {
       setsToProcess =
-          _allLearningSets.where((set) {
-            return set.title.toLowerCase().contains(query) ||
-                set.description.toLowerCase().contains(query) ||
-                set.category.toLowerCase().contains(query) ||
-                set.author.toLowerCase().contains(query);
+          _masterLearningSets.where((set) {
+            // 保留原有的過濾邏輯，但可以根據 LearningSet 的實際欄位調整
+            final titleMatch = set.title.toLowerCase().contains(query);
+            final categoryMatch = set.category.toLowerCase().contains(query);
+            // description 和 author 可能為 null，需要檢查
+            final descriptionMatch =
+                set.description?.toLowerCase().contains(query) ?? false;
+            final authorMatch =
+                set.author?.toLowerCase().contains(query) ?? false;
+            return titleMatch ||
+                categoryMatch ||
+                descriptionMatch ||
+                authorMatch;
           }).toList();
     }
 
@@ -171,10 +147,8 @@ class _LearningScreenState extends State<LearningScreen> {
       (tempGrouped[set.category] ??= []).add(set);
     }
 
-    // 確保分類順序一致 (可選)
     final sortedKeys =
         tempGrouped.keys.toList()..sort((a, b) {
-          // 您可以定義自己的排序邏輯，例如將 "JLPT" 放在前面
           if (a == 'JLPT') return -1;
           if (b == 'JLPT') return 1;
           return a.compareTo(b);
@@ -183,10 +157,12 @@ class _LearningScreenState extends State<LearningScreen> {
     final Map<String, List<LearningSet>> finalGrouped = {
       for (var key in sortedKeys) key: tempGrouped[key]!,
     };
-
-    setState(() {
-      _groupedAndFilteredSets = finalGrouped;
-    });
+    if (mounted) {
+      // Check if the widget is still in the tree
+      setState(() {
+        _groupedAndFilteredSets = finalGrouped;
+      });
+    }
   }
 
   void _navigateToLearningSetDetail(LearningSet set) {
@@ -207,10 +183,6 @@ class _LearningScreenState extends State<LearningScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 計算 GridView 高度，假設每個卡片高度約 150-180，顯示兩行
-    // (卡片高度 + 垂直間距) * 行數 + 上下 padding
-    // 例如：(160 + 10) * 2 = 340.  您可以根據 LearningSetGridItem 的實際渲染高度調整。
-    // 這裡的 childAspectRatio 也會影響卡片寬度，進而影響一行能放多少卡片。
     const double gridItemHeight = 160.0; // 預期卡片高度
     const int crossAxisCount = 2; // 垂直方向顯示的行數
     const double gridViewVerticalSpacing = 10.0;
@@ -253,7 +225,11 @@ class _LearningScreenState extends State<LearningScreen> {
           ),
           Expanded(
             child:
-                _groupedAndFilteredSets.isEmpty
+                _isLoading // 根據加載狀態顯示 UI
+                    ? const Center(
+                      child: CircularProgressIndicator(),
+                    ) // 顯示加載指示器
+                    : _groupedAndFilteredSets.isEmpty
                     ? Center(
                       child: Text(
                         _searchController.text.isEmpty
@@ -275,7 +251,7 @@ class _LearningScreenState extends State<LearningScreen> {
                             _groupedAndFilteredSets[category]!;
 
                         if (setsInCategory.isEmpty) {
-                          return const SizedBox.shrink(); // 如果某分類下沒有內容則不顯示
+                          return const SizedBox.shrink();
                         }
 
                         return Column(
@@ -297,8 +273,7 @@ class _LearningScreenState extends State<LearningScreen> {
                               ),
                             ),
                             SizedBox(
-                              height:
-                                  horizontalGridViewHeight, // 給 GridView 一個固定的高度
+                              height: horizontalGridViewHeight,
                               child: GridView.builder(
                                 scrollDirection: Axis.horizontal,
                                 padding: const EdgeInsets.symmetric(
@@ -308,14 +283,10 @@ class _LearningScreenState extends State<LearningScreen> {
                                 itemCount: setsInCategory.length,
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount:
-                                          crossAxisCount, // 垂直方向顯示的行數
-                                      mainAxisSpacing: 10.0, // 主軸 (水平) 間距
-                                      crossAxisSpacing:
-                                          gridViewVerticalSpacing, // 交叉軸 (垂直) 間距
-                                      childAspectRatio:
-                                          0.85, // 寬高比 (寬度/高度)，調整此值以獲得合適的卡片形狀
-                                      // 例如，如果卡片高 160，寬度會是 160 * 0.85 = 136
+                                      crossAxisCount: crossAxisCount,
+                                      mainAxisSpacing: 10.0,
+                                      crossAxisSpacing: gridViewVerticalSpacing,
+                                      childAspectRatio: 0.85,
                                     ),
                                 itemBuilder: (context, itemIndex) {
                                   final set = setsInCategory[itemIndex];
@@ -327,9 +298,7 @@ class _LearningScreenState extends State<LearningScreen> {
                                 },
                               ),
                             ),
-                            if (index <
-                                _groupedAndFilteredSets.keys.length -
-                                    1) // 最後一個分類後不加分隔線
+                            if (index < _groupedAndFilteredSets.keys.length - 1)
                               const Divider(
                                 indent: 16,
                                 endIndent: 16,

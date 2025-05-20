@@ -32,17 +32,23 @@ class LoginScreen extends StatelessWidget {
       final UserCredential userCredential = await FirebaseAuth.instance
           .signInWithCredential(credential);
 
-      final String? userId =
-          userCredential.user?.email ?? userCredential.user?.uid;
+      final User? firebaseUser = userCredential.user; // 獲取 Firebase User 物件
 
-      if (userId != null) {
-        // 更新 Firestore 中的登入資料
-        await _updateLoginData(userId);
+      if (firebaseUser != null) {
+        // 更新 Firestore 中的登入資料，傳遞 firebaseUser
+        await _updateLoginData(firebaseUser);
       }
+
+      // 在此處加入 print 陳述式以進行偵錯
+      print('嘗試顯示成功 SnackBar。context.mounted: ${context.mounted}');
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google 登入成功: ${userId ?? 'N/A'}')),
+          SnackBar(
+            content: Text(
+              'Google 登入成功: ${firebaseUser?.email ?? firebaseUser?.uid ?? 'N/A'}',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -55,55 +61,82 @@ class LoginScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _updateLoginData(String userId) async {
+  Future<void> _updateLoginData(User firebaseUser) async {
+    // 接收 Firebase User 物件
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    final DocumentReference userDoc = firestore.collection('users').doc(userId);
+    // 使用 firebaseUser.email 作為文件 ID，以利 Account Screen 查找
+    // 注意：Google 登入通常會提供 email，此處假設 firebaseUser.email 不為 null
+    if (firebaseUser.email == null) {
+      print('錯誤：使用者 email 為 null，無法更新 Firestore 文件 ID。');
+      // 考慮拋出錯誤或採取其他處理方式
+      return;
+    }
+    final DocumentReference userDoc = firestore
+        .collection('users')
+        .doc(firebaseUser.email!); // 使用 email 作為 ID
 
     final DateTime today = DateTime.now();
-    final String todayString =
-        today.toIso8601String().split('T').first; // 只取日期部分
+    final String todayString = today.toIso8601String().split('T').first;
+
+    // 準備要儲存/更新的使用者個人資料
+    Map<String, dynamic> userProfileData = {
+      'uid': firebaseUser.uid, // 在文件中也儲存 uid 欄位，方便查詢
+      'email': firebaseUser.email,
+      'displayName': firebaseUser.displayName,
+      'photoURL': firebaseUser.photoURL,
+    };
 
     try {
       final DocumentSnapshot docSnapshot = await userDoc.get();
 
       if (docSnapshot.exists) {
+        // 文件已存在，更新資料
         final data = docSnapshot.data() as Map<String, dynamic>;
         final String? lastLoginDate = data['lastLoginDate'];
-        final int consecutiveLoginDays = data['consecutiveLoginDays'] ?? 0;
+        int consecutiveLoginDays = data['consecutiveLoginDays'] ?? 0;
+
+        Map<String, dynamic> updateData = {
+          ...userProfileData, // 每次登入都更新個人資料
+          'lastLoginDate': todayString,
+          'lastModified': FieldValue.serverTimestamp(), // 記錄最後修改時間
+        };
 
         if (lastLoginDate != null) {
           final DateTime lastLogin = DateTime.parse(lastLoginDate);
+          final int differenceInDays = today.difference(lastLogin).inDays;
 
-          // 判斷是否為連續登入
-          if (today.difference(lastLogin).inDays == 1) {
+          if (differenceInDays == 1) {
             // 連續登入
-            await userDoc.update({
-              'lastLoginDate': todayString,
-              'consecutiveLoginDays': consecutiveLoginDays + 1,
-            });
-          } else if (today.difference(lastLogin).inDays > 1) {
-            // 中斷連續登入
-            await userDoc.update({
-              'lastLoginDate': todayString,
-              'consecutiveLoginDays': 1,
-            });
+            updateData['consecutiveLoginDays'] = consecutiveLoginDays + 1;
+          } else if (differenceInDays > 1) {
+            // 連續登入中斷
+            updateData['consecutiveLoginDays'] = 1;
+          } else if (differenceInDays == 0) {
+            // 當天重複登入，保持之前的連續登入天數
+            // 如果 consecutiveLoginDays 因故為 0，則設為 1
+            updateData['consecutiveLoginDays'] =
+                consecutiveLoginDays > 0 ? consecutiveLoginDays : 1;
+          } else {
+            // 此情況不應發生 (上次登入日期在未來)，預設為 1
+            updateData['consecutiveLoginDays'] = 1;
           }
         } else {
-          // 第一次登入
-          await userDoc.update({
-            'lastLoginDate': todayString,
-            'consecutiveLoginDays': 1,
-          });
+          // 文件存在但沒有 lastLoginDate，視為首次記錄登入天數
+          updateData['consecutiveLoginDays'] = 1;
         }
+        await userDoc.update(updateData);
       } else {
-        // 如果文件不存在，創建新文件
+        // 文件不存在，創建新文件
         await userDoc.set({
+          ...userProfileData,
           'lastLoginDate': todayString,
           'consecutiveLoginDays': 1,
+          'createdAt': FieldValue.serverTimestamp(), // 記錄使用者創建時間
         });
       }
     } catch (e) {
       print('更新登入資料失敗: $e');
+      // 您可以在此處選擇重新拋出錯誤或進行其他錯誤處理
     }
   }
 

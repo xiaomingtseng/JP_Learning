@@ -18,6 +18,7 @@ import 'dictionary_screen.dart';
 import 'notebooks_screen.dart'; // 匯入 NotebooksScreen
 import 'article_webview_screen.dart'; // 匯入 ArticleWebViewScreen
 import 'dart:async'; // 匯入 Timer 所需的包
+import 'realtime_translate_screen.dart'; // 匯入新的即時翻譯畫面
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -203,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final newGroup = await _noteService.createGroup(groupName);
         if (!mounted) return; // Check mounted state after async operation
         if (newGroup != null) {
-          await _loadGroups(); // _loadGroups has its own mounted checks
+          await _loadGroups(); // _loadGroups has其 own mounted checks
         } else {
           ScaffoldMessenger.of(
             context,
@@ -327,14 +328,15 @@ class _HomeScreenState extends State<HomeScreen> {
     print("Camera icon pressed");
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('拍照功能')));
+    ).showSnackBar(const SnackBar(content: Text('擷取文字功能')));
   }
 
   void _onMicPressed() {
-    print("Mic icon pressed");
-    ScaffoldMessenger.of(
+    print("Mic icon pressed, navigating to RealtimeTranslateScreen");
+    Navigator.push(
       context,
-    ).showSnackBar(const SnackBar(content: Text('錄音功能')));
+      MaterialPageRoute(builder: (context) => const RealtimeTranslateScreen()),
+    );
   }
 
   void _onItemTapped(int index) {
@@ -353,6 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onNotebookPressed: _onNotebookPressed,
             onCameraPressed: _onCameraPressed,
             onMicPressed: _onMicPressed,
+            onRealtimeTranslatePressed: _onMicPressed,
           ),
           const SizedBox(height: 20),
           const Text(

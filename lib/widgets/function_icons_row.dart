@@ -4,12 +4,14 @@ class FunctionIconsRow extends StatelessWidget {
   final VoidCallback onNotebookPressed;
   final VoidCallback onCameraPressed;
   final VoidCallback onMicPressed;
+  final VoidCallback? onRealtimeTranslatePressed; // 新增即時翻譯按鈕的回調
 
   const FunctionIconsRow({
     super.key,
     required this.onNotebookPressed,
     required this.onCameraPressed,
     required this.onMicPressed,
+    this.onRealtimeTranslatePressed, // 讓其可選，以便舊的用法不受影響
   });
 
   Widget _buildFunctionIcon(
@@ -53,14 +55,14 @@ class FunctionIconsRow extends StatelessWidget {
             _buildFunctionIcon(
               context,
               Icons.camera_alt_outlined,
-              '拍照',
+              '圖片文字擷取',
               onCameraPressed,
             ),
             _buildFunctionIcon(
               context,
               Icons.mic_none_outlined,
-              '錄音',
-              onMicPressed,
+              '即時翻譯',
+              onRealtimeTranslatePressed ?? onMicPressed, // 如果提供了新的回調則使用，否則使用舊的
             ),
             // 您可以繼續添加更多圖示
           ],

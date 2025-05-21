@@ -11,7 +11,7 @@ plugins {
 android {
     namespace = "com.example.jp_learning"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973" // <--- Updated NDK version
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -27,7 +27,7 @@ android {
         applicationId = "com.example.jp_learning"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23 // <--- 修改或新增這一行 (注意是 minSdk 而不是 minSdkVersion)
+        minSdk = 24 // <--- Updated to 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

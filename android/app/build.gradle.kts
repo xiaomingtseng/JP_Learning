@@ -42,6 +42,11 @@ android {
     }
 }
 
+dependencies {
+    // 新增 ML Kit 日文文字辨識模型的依賴
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.0")
+}
+
 flutter {
     source = "../.."
 }

@@ -1,6 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class AppThemes {
+  static final ThemeData lightTheme = ThemeData(
+    colorScheme: ColorScheme.fromSwatch(
+      primarySwatch: Colors.pink,
+      brightness: Brightness.light,
+    ).copyWith(secondary: Colors.amber),
+    brightness: Brightness.light,
+    buttonTheme: ButtonThemeData(
+      buttonColor: Colors.pink,
+      textTheme: ButtonTextTheme.primary,
+    ),
+  );
+
+  static final ThemeData darkTheme = ThemeData(
+    colorScheme: ColorScheme.fromSwatch(
+      primarySwatch: Colors.deepPurple,
+      brightness: Brightness.dark,
+    ).copyWith(secondary: Colors.teal),
+    brightness: Brightness.dark,
+    buttonTheme: ButtonThemeData(
+      buttonColor: Colors.deepPurple,
+      textTheme: ButtonTextTheme.primary,
+    ),
+  );
+}
+
 class ThemeNotifier with ChangeNotifier {
   final String key = "theme_mode";
   SharedPreferences? _prefs;

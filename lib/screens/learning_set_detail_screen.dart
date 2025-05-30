@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/learning_set.dart';
 import '../services/kotoba_service.dart';
 import '../models/kotoba.dart';
+import 'matching_screen.dart'; // 匯入 MatchingScreen
+import 'multiple_choice_screen.dart'; // 匯入 MultipleChoiceScreen
 
 class LearningSetDetailScreen extends StatelessWidget {
   final LearningSet learningSet;
@@ -91,13 +93,29 @@ class LearningSetDetailScreen extends StatelessWidget {
                         children: [
                           ElevatedButton(
                             onPressed: () {
-                              // TODO: 實現配對學習模式的邏輯
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => MatchingScreen(
+                                        kotobaList: kotobaList,
+                                      ),
+                                ),
+                              );
                             },
                             child: const Text('配對'),
                           ),
                           ElevatedButton(
                             onPressed: () {
-                              // TODO: 實現選擇學習模式的邏輯
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => MultipleChoiceScreen(
+                                        kotobaList: kotobaList,
+                                      ),
+                                ),
+                              );
                             },
                             child: const Text('選擇'),
                           ),

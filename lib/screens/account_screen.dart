@@ -148,7 +148,7 @@ class _AccountScreenState extends State<AccountScreen> {
       elevation: 2.0,
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0), // 修改這裡的 padding
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -236,134 +236,141 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('使用者帳戶')),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: <Widget>[
-          // 使用者資訊區塊
-          Center(
-            child: Column(
-              children: <Widget>[
-                CircleAvatar(
-                  radius: 50.0,
-                  backgroundImage: NetworkImage(_userProfile.avatarUrl),
-                  onBackgroundImageError: (_, __) {}, // 處理圖片載入錯誤
-                  child:
-                      _userProfile.avatarUrl.isEmpty ||
-                              _userProfile.avatarUrl ==
-                                  'https://via.placeholder.com/150' // 檢查是否為預設圖片
-                          ? const Icon(Icons.person, size: 50)
-                          : null,
-                ),
-                const SizedBox(height: 16.0),
-                InkWell(
-                  // 使名稱可點擊
-                  onTap: () {
-                    _showEditDialog(context, '名稱', _userProfile.name, (
-                      newValue,
-                    ) {
-                      setState(() {
-                        _userProfile = _userProfile.copyWith(name: newValue);
-                      });
-                      _saveProfile();
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _userProfile.name,
-                          style: const TextStyle(
-                            fontSize: 22.0,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.edit, size: 18, color: Colors.grey[600]),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4.0),
-                // 修改 Email 顯示部分，使其不可編輯
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Text(
-                    _userProfile.email, // 直接顯示 Email
-                    style: TextStyle(
-                      fontSize: 16.0,
-                      color: Colors.grey[700], // 可以調整顏色以示區別
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24.0),
-          const Divider(),
-          const SizedBox(height: 16.0),
-          Text(
-            '學習紀錄',
-            style: TextStyle(
-              fontSize: 18.0,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColorDark,
-            ),
-          ),
-          const SizedBox(height: 16.0),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10.0,
-            mainAxisSpacing: 10.0,
-            childAspectRatio: 1.2, // 調整卡片的寬高比，如果內容變多可能需要調整
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              _buildStatisticCard(
-                context,
-                Icons.calendar_today_outlined, // 連續上線圖示
-                '連續上線天數',
-                _userProfile.consecutiveLoginDays.toString(),
+              // 使用者資訊區塊
+              Center(
+                child: Column(
+                  children: <Widget>[
+                    CircleAvatar(
+                      radius: 50.0,
+                      backgroundImage: NetworkImage(_userProfile.avatarUrl),
+                      onBackgroundImageError: (_, __) {}, // 處理圖片載入錯誤
+                      child:
+                          _userProfile.avatarUrl.isEmpty ||
+                                  _userProfile.avatarUrl ==
+                                      'https://via.placeholder.com/150' // 檢查是否為預設圖片
+                              ? const Icon(Icons.person, size: 50)
+                              : null,
+                    ),
+                    const SizedBox(height: 16.0),
+                    InkWell(
+                      // 使名稱可點擊
+                      onTap: () {
+                        _showEditDialog(context, '名稱', _userProfile.name, (
+                          newValue,
+                        ) {
+                          setState(() {
+                            _userProfile = _userProfile.copyWith(
+                              name: newValue,
+                            );
+                          });
+                          _saveProfile();
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _userProfile.name,
+                              style: const TextStyle(
+                                fontSize: 22.0,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(Icons.edit, size: 18, color: Colors.grey[600]),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4.0),
+                    // 修改 Email 顯示部分，使其不可編輯
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text(
+                        _userProfile.email, // 直接顯示 Email
+                        style: TextStyle(
+                          fontSize: 16.0,
+                          color: Colors.grey[700], // 可以調整顏色以示區別
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              _buildStatisticCard(
-                context,
-                Icons.article_outlined,
-                '文章按讚',
-                _userProfile.likedArticlesCount.toString(),
+              const SizedBox(height: 24.0),
+              const Divider(),
+              const SizedBox(height: 16.0),
+              Text(
+                '學習紀錄',
+                style: TextStyle(
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColorDark,
+                ),
               ),
-              _buildStatisticCard(
-                context,
-                Icons.newspaper_outlined,
-                '新聞按讚',
-                _userProfile.likedNewsCount.toString(),
+              const SizedBox(height: 16.0),
+              // 移除 Expanded 並直接使用 GridView
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10.0,
+                mainAxisSpacing: 10.0,
+                childAspectRatio: 1.2, // 調整卡片的寬高比
+                children: <Widget>[
+                  _buildStatisticCard(
+                    context,
+                    Icons.calendar_today_outlined, // 連續上線圖示
+                    '連續上線天數',
+                    _userProfile.consecutiveLoginDays.toString(),
+                  ),
+                  _buildStatisticCard(
+                    context,
+                    Icons.article_outlined,
+                    '文章按讚',
+                    _userProfile.likedArticlesCount.toString(),
+                  ),
+                  _buildStatisticCard(
+                    context,
+                    Icons.newspaper_outlined,
+                    '新聞按讚',
+                    _userProfile.likedNewsCount.toString(),
+                  ),
+                  _buildStatisticCard(
+                    context,
+                    Icons.translate_outlined,
+                    '學習單字數',
+                    _userProfile.learnedWordsCount.toString(),
+                  ),
+                  _buildStatisticCard(
+                    context,
+                    Icons.font_download_outlined,
+                    '學習漢字數',
+                    _userProfile.learnedKanjiCount.toString(),
+                  ),
+                ],
               ),
-              _buildStatisticCard(
-                context,
-                Icons.translate_outlined,
-                '學習單字數',
-                _userProfile.learnedWordsCount.toString(),
+              const SizedBox(height: 24.0),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.logout),
+                label: const Text('登出'),
+                onPressed: _signOut, // 直接呼叫 _signOut 方法
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white,
+                ),
               ),
-              _buildStatisticCard(
-                context,
-                Icons.font_download_outlined,
-                '學習漢字數',
-                _userProfile.learnedKanjiCount.toString(),
-              ),
-              // 可以再增加一個空的 Card 來填滿 GridView，如果項目是奇數個
             ],
           ),
-          const SizedBox(height: 24.0),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.logout),
-            label: const Text('登出'),
-            onPressed: _signOut, // 直接呼叫 _signOut 方法
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

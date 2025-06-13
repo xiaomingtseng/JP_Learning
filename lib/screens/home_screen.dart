@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _newsError = e.toString();
+          _newsError = '無法載入新聞，請檢查您的網路連線。';
           _isLoadingNews = false;
         });
       }
@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _articlesError = e.toString();
+          _articlesError = '無法載入文章，請檢查您的網路連線。';
           _isLoadingArticles = false;
         });
       }

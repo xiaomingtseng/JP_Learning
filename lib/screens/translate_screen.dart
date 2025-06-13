@@ -276,152 +276,162 @@ class _TranslateScreenState extends State<TranslateScreen> {
     // 如果是 'auto' 或其他未指定的語言，可以使用通用提示或不加範例
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+      body: SafeArea(
+        // Wrap with SafeArea
+        child: SingleChildScrollView(
+          // <--- 加入 SingleChildScrollView
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _buildLanguageDropdown(
-                  _sourceLanguageCode,
-                  true,
-                  iconColor,
-                  dropdownTextColor,
-                ),
-                IconButton(
-                  icon: Icon(Icons.swap_horiz, color: iconColor),
-                  tooltip: '交換語言',
-                  onPressed: _swapLanguages,
-                ),
-                _buildLanguageDropdown(
-                  _targetLanguageCode,
-                  false,
-                  iconColor,
-                  dropdownTextColor,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16.0),
-
-            TextField(
-              controller: _inputController,
-              decoration: InputDecoration(
-                labelText: '輸入要翻譯的文本', // labelText 可以保持不變
-                hintText: inputHintText, // 使用動態生成的 hintText
-                border: const OutlineInputBorder(),
-                suffixIcon:
-                    _inputController.text.isNotEmpty
-                        ? IconButton(
-                          icon: Icon(Icons.clear, color: iconColor),
-                          onPressed: _clearInput,
-                        )
-                        : null,
-              ),
-              minLines: 3,
-              maxLines: 5,
-              onChanged: (text) {
-                if (mounted) setState(() {});
-              },
-            ),
-            const SizedBox(height: 16.0),
-
-            ElevatedButton.icon(
-              icon:
-                  _isLoading
-                      ? Container(
-                        width: 24,
-                        height: 24,
-                        padding: const EdgeInsets.all(2.0),
-                        child: const CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
-                      )
-                      : const Icon(Icons.translate),
-              label: const Text('翻譯'),
-              onPressed: _isLoading ? null : _performTranslation,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-                textStyle: const TextStyle(fontSize: 16.0),
-              ),
-            ),
-            const SizedBox(height: 24.0),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '翻譯結果:',
-                  style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
-                ),
                 Row(
-                  children: [
-                    if (_outputController.text.isNotEmpty &&
-                        _outputController.text != "翻譯中..." &&
-                        _outputController.text != "請輸入要翻譯的內容" &&
-                        !_outputController.text.startsWith("翻譯失敗"))
-                      IconButton(
-                        icon: Icon(Icons.copy_all_outlined, color: iconColor),
-                        tooltip: '複製結果',
-                        onPressed:
-                            () => _copyToClipboard(_outputController.text),
-                      ),
-                    if (_outputController.text.isNotEmpty &&
-                        _outputController.text != "翻譯中..." &&
-                        _outputController.text != "請輸入要翻譯的內容" &&
-                        !_outputController.text.startsWith("翻譯失敗"))
-                      IconButton(
-                        icon: Icon(
-                          _ttsState == TtsState.playing
-                              ? Icons.stop_circle_outlined
-                              : Icons.volume_up_outlined,
-                          color: iconColor,
-                        ),
-                        tooltip:
-                            _ttsState == TtsState.playing ? '停止朗讀' : '朗讀結果',
-                        onPressed: () {
-                          if (_ttsState == TtsState.playing) {
-                            _stop();
-                          } else {
-                            _speak(_outputController.text);
-                          }
-                        },
-                      ),
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: <Widget>[
+                    _buildLanguageDropdown(
+                      _sourceLanguageCode,
+                      true,
+                      iconColor,
+                      dropdownTextColor,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.swap_horiz, color: iconColor),
+                      tooltip: '交換語言',
+                      onPressed: _swapLanguages,
+                    ),
+                    _buildLanguageDropdown(
+                      _targetLanguageCode,
+                      false,
+                      iconColor,
+                      dropdownTextColor,
+                    ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(12.0),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                  borderRadius: BorderRadius.circular(4.0),
-                  color: Theme.of(context).cardColor.withOpacity(0.5),
+                const SizedBox(height: 16.0),
+
+                TextField(
+                  controller: _inputController,
+                  decoration: InputDecoration(
+                    labelText: '輸入要翻譯的文本', // labelText 可以保持不變
+                    hintText: inputHintText, // 使用動態生成的 hintText
+                    border: const OutlineInputBorder(),
+                    suffixIcon:
+                        _inputController.text.isNotEmpty
+                            ? IconButton(
+                              icon: Icon(Icons.clear, color: iconColor),
+                              onPressed: _clearInput,
+                            )
+                            : null,
+                  ),
+                  minLines: 3,
+                  maxLines: 5,
+                  onChanged: (text) {
+                    if (mounted) setState(() {});
+                  },
                 ),
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    _outputController.text.isEmpty
-                        ? '翻譯結果將顯示於此'
-                        : _outputController.text,
-                    style: TextStyle(
-                      fontSize: 16.0,
-                      color:
-                          _outputController.text.isEmpty ||
-                                  _outputController.text == "翻譯中..." ||
-                                  _outputController.text == "請輸入要翻譯的內容" ||
-                                  _outputController.text.startsWith("翻譯失敗:")
-                              ? Colors.grey
-                              : Theme.of(context).textTheme.bodyLarge?.color,
+                const SizedBox(height: 16.0),
+
+                ElevatedButton.icon(
+                  icon:
+                      _isLoading
+                          ? Container(
+                            width: 24,
+                            height: 24,
+                            padding: const EdgeInsets.all(2.0),
+                            child: const CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          )
+                          : const Icon(Icons.translate),
+                  label: const Text('翻譯'),
+                  onPressed: _isLoading ? null : _performTranslation,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    textStyle: const TextStyle(fontSize: 16.0),
+                  ),
+                ),
+                const SizedBox(height: 16.0), // Reduced height
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '翻譯結果:',
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        if (_outputController.text.isNotEmpty &&
+                            _outputController.text != "翻譯中..." &&
+                            _outputController.text != "請輸入要翻譯的內容" &&
+                            !_outputController.text.startsWith("翻譯失敗"))
+                          IconButton(
+                            icon: Icon(
+                              Icons.copy_all_outlined,
+                              color: iconColor,
+                            ),
+                            tooltip: '複製結果',
+                            onPressed:
+                                () => _copyToClipboard(_outputController.text),
+                          ),
+                        if (_outputController.text.isNotEmpty &&
+                            _outputController.text != "翻譯中..." &&
+                            _outputController.text != "請輸入要翻譯的內容" &&
+                            !_outputController.text.startsWith("翻譯失敗"))
+                          IconButton(
+                            icon: Icon(
+                              _ttsState == TtsState.playing
+                                  ? Icons.stop_circle_outlined
+                                  : Icons.volume_up_outlined,
+                              color: iconColor,
+                            ),
+                            tooltip:
+                                _ttsState == TtsState.playing ? '停止朗讀' : '朗讀結果',
+                            onPressed: () {
+                              if (_ttsState == TtsState.playing) {
+                                _stop();
+                              } else {
+                                _speak(_outputController.text);
+                              }
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8.0),
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                    borderRadius: BorderRadius.circular(4.0),
+                    color: Theme.of(context).cardColor.withOpacity(0.5),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      _outputController.text.isEmpty
+                          ? '翻譯結果將顯示於此'
+                          : _outputController.text,
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        color:
+                            _outputController.text.isEmpty ||
+                                    _outputController.text == "翻譯中..." ||
+                                    _outputController.text == "請輸入要翻譯的內容" ||
+                                    _outputController.text.startsWith("翻譯失敗:")
+                                ? Colors.grey
+                                : Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
